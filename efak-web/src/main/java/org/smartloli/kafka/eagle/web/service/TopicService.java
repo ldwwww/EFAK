@@ -196,6 +196,11 @@ public interface TopicService {
     public String getPreviewTopicPartitionMsg(String clusterAlias, JSONObject tp);
 
     /**
+     * List filtered topic message.
+     */
+    public JSONObject listTopicMessage(String clusterAlias, JSONObject tmp);
+
+    /**
      * Count topic consumer group.
      */
     public long countTopicConsumerGroup(Map<String, Object> params);

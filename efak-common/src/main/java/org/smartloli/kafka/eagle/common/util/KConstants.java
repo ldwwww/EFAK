@@ -88,6 +88,7 @@ public class KConstants {
         public static final int ALL_PARTITION = -1;
         public static final String SASL_PLAINTEXT = "SASL_PLAINTEXT";
         public static final String SSL = "SSL";
+        public static final Long MAX_POLL_RECORDS_NUM = 10L;
     }
 
     public final class Common {

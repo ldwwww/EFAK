@@ -42,6 +42,12 @@ public class KafkaSqlInfo extends BaseProtocol {
 	private boolean status;
 	private List<HostsInfo> seeds = new ArrayList<>();
 	private String clusterAlias;
+	private long startTime;
+	private long endTime;
+	private long offset;
+	private int page;
+	private boolean needCount;
+
 
 	public long getLimit() {
 		return limit;
@@ -123,4 +129,43 @@ public class KafkaSqlInfo extends BaseProtocol {
 		this.status = status;
 	}
 
+	public long getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(long startTime) {
+		this.startTime = startTime;
+	}
+
+	public long getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(long endTime) {
+		this.endTime = endTime;
+	}
+
+	public long getOffset() {
+		return offset;
+	}
+
+	public void setOffset(long offset) {
+		this.offset = offset;
+	}
+
+	public int getPage() {
+		return page;
+	}
+
+	public void setPage(int page) {
+		this.page = page;
+	}
+
+	public boolean isNeedCount() {
+		return needCount;
+	}
+
+	public void setNeedCount(boolean needCount) {
+		this.needCount = needCount;
+	}
 }

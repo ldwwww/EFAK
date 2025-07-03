@@ -489,6 +489,11 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
+    public JSONObject listTopicMessage(String clusterAlias, JSONObject tmp) {
+        return kafkaService.listTopicMessage(clusterAlias, tmp);
+    }
+
+    @Override
     public long countTopicConsumerGroup(Map<String, Object> params) {
         return topicDao.countTopicConsumerGroup(params);
     }

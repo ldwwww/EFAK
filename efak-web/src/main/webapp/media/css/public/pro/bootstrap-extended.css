@@ -314,7 +314,7 @@
 
 .btn i {
     vertical-align: middle;
-    font-size: 1.rem;
+    font-size: 1rem;
     margin-top: -1em;
     margin-bottom: -1em;
     margin-left: 5px;
@@ -758,6 +758,10 @@
 	color: #0a58ca
 }
 
+.btn-no-border {
+	color: inherit !important;
+	border: none transparent !important;
+}
 
 /* Nav-Tabs */
 

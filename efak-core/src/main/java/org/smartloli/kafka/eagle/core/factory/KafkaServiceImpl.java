@@ -570,6 +570,23 @@ public class KafkaServiceImpl implements KafkaService {
         return KafkaConsumerAdapter.preview(ksql).toString();
     }
 
+    /**
+     * List filtered topic message
+     */
+    @Override
+    public JSONObject listTopicMessage(String clusterAlias, JSONObject tmp) {
+        KafkaSqlInfo ksql = new KafkaSqlInfo();
+        ksql.setClusterAlias(clusterAlias);
+        ksql.setTopic(tmp.getString("topic"));
+        ksql.setStartTime(tmp.getLong("stime"));
+        ksql.setEndTime(tmp.getLong("etime"));
+        ksql.setPartition(Collections.singletonList(tmp.getInteger("partition")));
+        ksql.setPage(tmp.getInteger("page"));
+        ksql.setLimit(KConstants.Kafka.MAX_POLL_RECORDS_NUM);
+        ksql.setNeedCount(tmp.getBoolean("need_count"));
+        return KafkaConsumerAdapter.filter(ksql);
+    }
+
     private KafkaSqlInfo segments(String clusterAlias, String sql) {
         KafkaSqlInfo kafkaSql = new KafkaSqlInfo();
         kafkaSql.setSql(sql);

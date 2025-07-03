@@ -20,10 +20,7 @@ package org.smartloli.kafka.eagle.core.sql.execute;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import org.apache.kafka.clients.CommonClientConfigs;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.smartloli.kafka.eagle.common.protocol.KafkaSqlInfo;
@@ -38,6 +35,7 @@ import org.smartloli.kafka.eagle.core.sql.schema.TopicSchema;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Parse the sql statement, and execute the sql content, get the message record
@@ -180,4 +178,109 @@ public class KafkaConsumerAdapter {
         return messages;
     }
 
+    /**
+     * List filtered topic message
+     */
+    public static JSONObject filter(KafkaSqlInfo kafkaSql){
+        JSONObject res = new JSONObject();
+        List<JSONObject> messages = new ArrayList<>();
+        Properties props = new Properties();
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, Kafka.EFAK_SYSTEM_GROUP);
+        props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaService.getKafkaBrokerServer(kafkaSql.getClusterAlias()));
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getCanonicalName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getCanonicalName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, Kafka.EARLIEST);
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, Math.toIntExact(kafkaSql.getLimit()));
+
+        if (SystemConfigUtils.getBooleanProperty(kafkaSql.getClusterAlias() + ".efak.sasl.enable")) {
+            kafkaService.sasl(props, kafkaSql.getClusterAlias());
+        }
+        if (SystemConfigUtils.getBooleanProperty(kafkaSql.getClusterAlias() + ".efak.ssl.enable")) {
+            kafkaService.ssl(props, kafkaSql.getClusterAlias());
+        }
+
+        int page = kafkaSql.getPage();
+        long limit = kafkaSql.getLimit();
+        long startTime = kafkaSql.getStartTime();
+        long endTime = kafkaSql.getEndTime();
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+        List<TopicPartition> topicPartitions = new ArrayList<>();
+        Map<TopicPartition, Long> startTimeStamp = new HashMap<>();
+        Map<TopicPartition, Long> endTimeStamp = new HashMap<>();
+
+        for (Integer partition: kafkaSql.getPartition()){
+            TopicPartition tp = new TopicPartition(kafkaSql.getTopic(), partition);
+            topicPartitions.add(tp);
+            startTimeStamp.put(tp, startTime);
+            endTimeStamp.put(tp, endTime);
+        }
+
+        Map<TopicPartition, OffsetAndTimestamp> startTimeAndOffsets = consumer.offsetsForTimes(startTimeStamp);
+        Map<TopicPartition, OffsetAndTimestamp> endTimeAndOffsets = consumer.offsetsForTimes(endTimeStamp);
+        Map<Integer, Long> simpleSTAOMap = startTimeAndOffsets.entrySet().stream()
+                        .collect(Collectors.toMap(
+                                entry -> entry.getKey().partition(),
+                                entry -> entry.getValue() == null ? -2L : entry.getValue().offset()
+                        ));
+        Map<Integer, Long> simpleETAOMap = endTimeAndOffsets.entrySet().stream()
+                .collect(Collectors.toMap(
+                        entry -> entry.getKey().partition(),
+                        entry -> entry.getValue() == null ? -2L : entry.getValue().offset() - 1
+                ));
+
+        consumer.assign(topicPartitions);
+
+        for (TopicPartition tp: topicPartitions){
+            Long startOffset = simpleSTAOMap.get(tp.partition());
+            Long endOffset = simpleETAOMap.get(tp.partition());
+            if (startOffset < -1L){
+                simpleSTAOMap.replace(tp.partition(), consumer.endOffsets(Collections.singleton(tp)).get(tp));
+            }
+
+            if (endOffset < -1L){
+                endOffset = consumer.endOffsets(Collections.singleton(tp)).get(tp) - 1;
+                simpleETAOMap.replace(tp.partition(), endOffset);
+            }
+            endOffset -= (page * limit - 1);
+            endOffset = endOffset < 0 ? 0 : endOffset;
+            consumer.seek(tp, endOffset);
+        }
+
+        if (!kafkaSql.isNeedCount()){
+            res.put("total", -1);
+        } else{
+            long totalCnt = 0L;
+            for (Integer i: simpleSTAOMap.keySet()){
+                long cnt = simpleETAOMap.get(i) - simpleSTAOMap.get(i) + 1;
+                cnt = cnt < 0 ? 0 : cnt;
+                totalCnt += cnt;
+            }
+            res.put("total",  totalCnt);   // records number of given datetime range in all partitions
+        }
+
+        ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(Kafka.TIME_OUT));
+        for (ConsumerRecord<String, String> record: records){
+            JSONObject obj = new JSONObject(new LinkedHashMap<>());
+            obj.put(TopicSchema.PARTITION, record.partition());
+            obj.put(TopicSchema.OFFSET, record.offset());
+            obj.put(TopicSchema.MSG, record.value());
+            obj.put(TopicSchema.TIMESPAN, record.timestamp());
+            obj.put(TopicSchema.DATE, CalendarUtils.convertUnixTime(record.timestamp()));
+            messages.add(obj);
+        }
+
+        Collections.reverse(messages);
+        messages = messages.stream()
+                .filter(obj -> (Long)obj.get(TopicSchema.OFFSET)
+                        >= simpleSTAOMap.get((Integer)obj.get(TopicSchema.PARTITION)) &&
+                        (Long)obj.get(TopicSchema.OFFSET)
+                        <= simpleETAOMap.get((Integer)obj.get(TopicSchema.PARTITION)) - (page - 1) * limit)  // 15-6 5-0
+                .collect(Collectors.toList());
+
+        consumer.close();
+
+        res.put("message", messages);
+
+        return res;
+    }
 }

@@ -14,7 +14,7 @@
    http://www.springframework.org/schema/tx	
    http://www.springframework.org/schema/tx/spring-tx-3.1.xsd">
 
-	<context:component-scan base-package="org.smartloli.kafka.eagle.web.controller" />
+	<context:component-scan base-package="org.smartloli.kafka.eagle.web" />
 	<bean id="mappingJacksonHttpMessageConverter" class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
 		<property name="supportedMediaTypes">
 			<list>
@@ -37,7 +37,7 @@
 	<bean class="org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter" />
 
 	<mvc:annotation-driven />
-	<mvc:resources mapping="/media/**" location="/WEB-INF/media/" />
+	<mvc:resources mapping="/media/**" location="/media/" />
 
 	<!-- ViewResolver -->
 	<!-- Filter out the suffix *.jsp, the specified directory in the new page -->

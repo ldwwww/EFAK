@@ -31,12 +31,38 @@ import java.util.Date;
  */
 public class CalendarUtils {
 
-	private static final String DATA_FORMAT_YEAN_MON_DAY_HOUR_MIN_SEC = "yyyy-MM-dd HH:mm:ss";
-	private static final String DATA_FORMAT_YEAR = "yyyyMMdd";
-	private static final String DATA_FORMAT_SPLIT_YEAR = "yyyy-MM-dd";
+	private static final String DATE_FORMAT_YEAR_MON_DAY_HOUR_MIN_SEC = "yyyy-MM-dd HH:mm:ss";
+	private static final String DATE_FORMAT_YEAR = "yyyyMMdd";
+	private static final String DATE_FORMAT_SPLIT_YEAR = "yyyy-MM-dd";
+	private static final String DATE_FORMAT_UNSPLIT_YEAR_MON_DAY_HOUR_MIN_SEC = "yyyyMMddHHmmss";
 
 	private CalendarUtils() {
 
+	}
+
+	/**
+	 * Convert unsplit datetime to split datetime
+	 * @param source
+	 * @return 2025-06-29 08:00:00
+	 * @throws ParseException
+	 */
+	public static String convertUnsplitDateTime2SplitDateTime(String source) throws ParseException {
+		SimpleDateFormat in = new SimpleDateFormat(DATE_FORMAT_UNSPLIT_YEAR_MON_DAY_HOUR_MIN_SEC);
+		SimpleDateFormat out = new SimpleDateFormat(DATE_FORMAT_YEAR_MON_DAY_HOUR_MIN_SEC);
+		Date date = in.parse(source);
+		return out.format(date);
+	}
+
+	/**
+	 * Convert unsplit datetime to unix time
+	 * @param source
+	 * @return 1498443597
+	 * @throws ParseException
+	 */
+	public static long convertUnsplitDateTimeToUnixTime(String source) throws ParseException {
+		SimpleDateFormat in = new SimpleDateFormat(DATE_FORMAT_UNSPLIT_YEAR_MON_DAY_HOUR_MIN_SEC);
+		Date date = in.parse(source);
+		return date.getTime();
 	}
 
 	/**
@@ -47,7 +73,7 @@ public class CalendarUtils {
 	 * @throws ParseException
 	 */
 	public static long convertDate2UnixTime(String date) throws ParseException {
-		SimpleDateFormat df = new SimpleDateFormat(DATA_FORMAT_YEAN_MON_DAY_HOUR_MIN_SEC);
+		SimpleDateFormat df = new SimpleDateFormat(DATE_FORMAT_YEAR_MON_DAY_HOUR_MIN_SEC);
 		return df.parse(date).getTime();
 	}
 
@@ -73,7 +99,7 @@ public class CalendarUtils {
 	 * @return Date String.
 	 */
 	public static String convertUnixTime(long unixtime) {
-		return convertUnixTime(unixtime, DATA_FORMAT_YEAN_MON_DAY_HOUR_MIN_SEC);
+		return convertUnixTime(unixtime, DATE_FORMAT_YEAR_MON_DAY_HOUR_MIN_SEC);
 	}
 
 	/**
@@ -95,13 +121,13 @@ public class CalendarUtils {
 	 * @return 1907-01-01 00:00:00
 	 */
 	public static String convertUnixTime2Date(long unixtime) {
-		SimpleDateFormat df = new SimpleDateFormat(DATA_FORMAT_YEAN_MON_DAY_HOUR_MIN_SEC);
+		SimpleDateFormat df = new SimpleDateFormat(DATE_FORMAT_YEAR_MON_DAY_HOUR_MIN_SEC);
 		return df.format(new Date(unixtime));
 	}
 
 	/** Get the date of the day,accurate to seconds. */
 	public static String getDate() {
-		SimpleDateFormat df = new SimpleDateFormat(DATA_FORMAT_YEAN_MON_DAY_HOUR_MIN_SEC);
+		SimpleDateFormat df = new SimpleDateFormat(DATE_FORMAT_YEAR_MON_DAY_HOUR_MIN_SEC);
 		return df.format(new Date());
 	}
 
@@ -118,7 +144,7 @@ public class CalendarUtils {
 
 	/** Get custom day. */
 	public static String getCustomLastDay(int day) {
-		SimpleDateFormat df = new SimpleDateFormat(DATA_FORMAT_YEAR);
+		SimpleDateFormat df = new SimpleDateFormat(DATE_FORMAT_YEAR);
 		Calendar calendar = Calendar.getInstance();
 		Date date = new Date();
 		calendar.setTime(date);
@@ -147,13 +173,13 @@ public class CalendarUtils {
 
 	/** Convert date to date. */
 	public static String convertDate2Date(String date) throws ParseException {
-		SimpleDateFormat newly = new SimpleDateFormat(DATA_FORMAT_SPLIT_YEAR);
-		SimpleDateFormat oldly = new SimpleDateFormat(DATA_FORMAT_YEAR);
+		SimpleDateFormat newly = new SimpleDateFormat(DATE_FORMAT_SPLIT_YEAR);
+		SimpleDateFormat oldly = new SimpleDateFormat(DATE_FORMAT_YEAR);
 		return newly.format(oldly.parse(date));
 	}
 
 	public static int getDiffDay(String beforeDate, String afterDate) throws ParseException {
-		SimpleDateFormat df = new SimpleDateFormat(DATA_FORMAT_YEAR);
+		SimpleDateFormat df = new SimpleDateFormat(DATE_FORMAT_YEAR);
 		return Integer.parseInt((df.parse(afterDate).getTime() - df.parse(beforeDate).getTime()) / (1000 * 3600 * 24) + "");
 	}
 

@@ -236,4 +236,8 @@ public interface KafkaService {
      */
     public String getPreviewTopicPartitionMsg(String clusterAlias, JSONObject tp);
 
+    /**
+     * List filtered topic message
+     */
+    public JSONObject listTopicMessage(String clusterAlias, JSONObject tmp);
 }

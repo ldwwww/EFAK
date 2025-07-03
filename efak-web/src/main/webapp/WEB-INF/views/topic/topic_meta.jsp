@@ -141,6 +141,29 @@
             </div>
         </div>
 
+        <!-- topic message list -->
+        <h6 class="mb-0 text-uppercase">Topic Message List</h6>
+        <hr/>
+        <div class="card">
+            <div class="card-body" style="margin-top: 5px">
+                <div class="table-responsive" style="position: relative">
+                    <table id="efak_topic_message_table_result" class="table table-striped table-bordered"
+                           style="width:100%">
+                        <thead>
+                        <tr>
+                            <th>Topic</th>
+                            <th>Partition</th>
+                            <th>Offset</th>
+                            <th>Message</th>
+                            <th>Timestamp</th>
+                            <th>Datetime</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- topic consumer group list -->
         <h6 class="mb-0 text-uppercase">Topic Consumer Groups</h6>
         <hr/>
@@ -255,7 +278,7 @@
 
 <!-- import js -->
 <jsp:include page="../public/pro/script.jsp">
-    <jsp:param value="main/topic/topic.meta.js?v=3.0.0" name="loader"/>
+    <jsp:param value="main/topic/topic.meta.js" name="loader"/>
     <jsp:param value="plugins/apexcharts-bundle/apexcharts.min.js" name="loader"/>
     <jsp:param value="plugins/datatimepicker/moment.min.js" name="loader"/>
     <jsp:param value="plugins/datatimepicker/daterangepicker.js" name="loader"/>

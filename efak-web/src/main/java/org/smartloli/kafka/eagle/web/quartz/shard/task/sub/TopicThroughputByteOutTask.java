@@ -64,11 +64,12 @@ public class TopicThroughputByteOutTask extends Thread {
 
     @Override
     public synchronized void run() {
-        try {
-            this.throughput();
-        } catch (Exception e) {
-            LoggerUtils.print(this.getClass()).error("Stats topic throughput has error, msg is ", e);
-        }
+        this.throughput();
+//        try {
+//            this.throughput();
+//        } catch (Exception e) {
+//            LoggerUtils.print(this.getClass()).error("Stats topic throughput has error, msg is ", e);
+//        }
     }
 
     private void throughput() {

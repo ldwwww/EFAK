@@ -2,6 +2,9 @@ $(document).ready(function () {
     var url = window.location.href;
     var topicName = url.split("meta/")[1].split("/")[0];
 
+    var metaTableLoaded = false;
+    var messageTableLoaded = false;
+
     // topic meta
     $("#efak_topic_meta_table_result").dataTable({
         "searching": false,
@@ -29,7 +32,85 @@ $(document).ready(function () {
             "mData": 'under_replicated'
         }, {
             "mData": 'preview'
-        }]
+        }],
+        "initComplete": function(settings, json){
+            metaTableLoaded = true;
+            checkAndInitPartition();
+        }
+    });
+
+    //topic message list
+    $("#efak_topic_message_table_result").dataTable({
+        "searching": false,
+        "bSort": false,
+        "bLengthChange": false,
+        "bProcessing": true,
+        "bServerSide": true,
+        "bPaginate": true,
+        "iDisplayLength": 10,
+        "pagingType": "full_numbers",
+        "dom": '<"row"<"col-sm-12 col-md-6"f><"col-sm-12 col-md-6 d-flex justify-content-end"lB>>' +
+            '<"row"<"col-sm-12"rt>>' +
+            '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        "buttons": [
+            {
+                text: '<div id="partition-select-container" class="col-12">' +
+                    '<select id="select2-partition" class="form-control single-select" style="width: 100%"></select>' +
+                    '</div>',
+                className: 'btn-no-border'
+            },
+            {
+                text: '<div id="detail_date_range" class="ms-auto me-10" ' +
+                    'style="border: 1px solid #ccc; cursor: pointer; padding: 5px 10px;" ' +
+                    '<i class="bx bx-calendar"></i> &nbsp; <span></span> <b class="caret"></b>' +
+                    '</div>',
+                className: 'btn-no-border'
+            },
+            {
+                text: '<div id="query-button-container" class="col-1" ' +
+                    '<div class="d-grid">' +
+                    '<button id="query-button" type="submit" class="btn btn-primary">Query</button>' +
+                    '</div>',
+                className: 'btn-no-border'
+            },
+        ],
+        "fnServerData": function (sSource, aoData, fnCallback) {
+            const [stime, etime] = getCalendarDateRange();
+            const partition = getPartitionInfo();
+            let page = 0;
+            for (let i = 0; i < aoData.length; i++){
+                if (aoData[i].name === 'iDisplayStart'){
+                    page = Math.floor(aoData[i].value / 10) + 1;
+                }
+            }
+
+            const params = {};
+            params.stime = stime;
+            params.etime = etime;
+            params.partition = partition;
+            params.page = page;
+            params.need_count = true;
+            fetchTopicMessageData(topicName, params, fnCallback);
+        },
+        "sAjaxSource": "/topic/message/" + topicName + "/ajax",
+        "aoColumns": [{
+            "mData": 'topic'
+        }, {
+            "mData": 'partition'
+        }, {
+            "mData": 'offset'
+        }, {
+            "mData": 'msg'
+        }, {
+            "mData": 'timespan'
+        }, {
+            "mData": 'date'
+        }],
+        "initComplete": function(settings, json){
+            messageTableLoaded = true;
+            checkAndInitPartition();
+            initCalendar();
+        }
     });
 
     // topic consumer group
@@ -65,6 +146,143 @@ $(document).ready(function () {
                 fnCallback(data)
             }
         });
+    }
+
+    function checkAndInitPartition(){
+        if (messageTableLoaded && messageTableLoaded) {
+            initPartition();
+        }
+    }
+
+    function initPartition() {
+        const partitions = $("#efak_topic_meta_table_result").DataTable().columns(1).data()[0];
+        const partitionOptions = [];
+
+        $.each(partitions, function (idx, val) {
+            partitionOptions.push({
+                id: val,
+                text: "Partition " + val
+            })
+        });
+
+        $("#select2-partition").select2({
+            data: partitionOptions,
+            theme: 'bootstrap4',
+            placeholder: 'Select Partition',
+            width: 'auto',
+            minimumResultsForSearch: Infinity
+        })
+
+        if (partitionOptions.length > 0) {
+            $('#select2-partition').val(partitionOptions[0].id).trigger('change');
+        }
+    }
+
+    // get partition info
+    function getPartitionInfo() {
+        var partitions = $("#select2-partition").val();
+        return (partitions === undefined || partitions === null) ? 0 : partitions;
+    }
+
+    function getDefaultStartTime() {
+        return moment().subtract(3, "day").startOf("day");
+    }
+
+    function getDefaultEndTime(){
+        return moment().endOf("day");
+    }
+
+    // add detail date range keeper
+    function initCalendar() {
+        var start = getDefaultStartTime();
+        var end = getDefaultEndTime();
+
+        try {
+            function cb(start, end) {
+                // HH: 24 hours format, hh: 12 hours format
+                $('#detail_date_range span').html(start.format("YYYY-MM-DD HH:mm:ss")
+                    + ' To '
+                    + end.format("YYYY-MM-DD HH:mm:ss"));
+            }
+
+            var detail_date_range = $('#detail_date_range').daterangepicker({
+                startDate: start,
+                endDate: end,
+                timePicker: true,
+                timePicker24Hour: true,
+                timePickerSeconds: true,
+                linkedCalendars: false,
+                autoUpdateInput: false,
+                showDropdowns: true,
+                locale: {
+                    format: "YYYY-MM-DD hh:mm:ss",
+                    separator: ' To ',
+                },
+                ranges: {
+                    'Today': [moment().startOf("day"), moment().endOf("day")],
+                    'Yesterday': [moment().subtract(1, 'days').startOf("day"), moment().endOf("day")],
+                    'Lastest 3 days': [moment().subtract(3, 'days').startOf("day"), moment().endOf("day")],
+                    'Lastest 7 days': [moment().subtract(6, 'days').startOf("day"), moment().endOf("day")]
+                }
+            }, cb);  // cb is invoked when choosing a new range and apply it
+
+            cb(start, end);
+        } catch (e) {
+            console.log(e.message);
+        }
+    }
+
+    // get calendar date range
+    function getCalendarDateRange() {
+        const dateRange = $('#detail_date_range span').text().trim();
+        const dateParts = dateRange.split(" To ");
+        if (dateParts.length < 2) {
+            return [getDefaultStartTime().format("YYYY-MM-DD HH:mm:ss").replace(/[- :]/g, ''),
+                    getDefaultEndTime().format("YYYY-MM-DD HH:mm:ss").replace(/[- :]/g, '')];
+        }
+        const stime = dateParts[0].replace(/[- :]/g, '');
+        const etime = dateParts[1].replace(/[- :]/g, '');
+        return [stime, etime];
+    }
+
+    function fetchTopicMessageData(topicName, params, callback) {
+        const queryString = Object.keys(params).map(function (k) {
+            return encodeURIComponent(k) + "=" + encodeURIComponent(params[k])
+        }).join("&");
+
+        $.ajax({
+            type: "GET",
+            url: "/topic/message/" + topicName + "/ajax?" + queryString,
+            success: function (data) {
+                data = JSON.parse(data);
+                if (!data || !Array.isArray(data.message)) {
+                    data.message = [];
+                }
+
+                data.message.forEach(function (item) {
+                    item.topic = topicName;
+                });
+
+                var result = {
+                    sEcho: 0,
+                    iTotalRecords: data.total,
+                    iTotalDisplayRecords: data.total,
+                    aaData: data.message
+                }
+
+                callback(result);
+            },
+
+            error: function (xhr, status, errorThrown) {
+                console.error("AJAX request for topic message failed:", status, error);
+                callback({
+                    sEcho: 0,
+                    iTotalRecords: 0,
+                    iTotalDisplayRecords: 0,
+                    aaData: []
+                });
+            }
+        })
     }
 
     $.ajax({
@@ -423,6 +641,12 @@ $(document).ready(function () {
         });
     });
 
+    // query message button
+    $(document).on("click", "#query-button", function () {
+        var table = $('#efak_topic_message_table_result').DataTable();
+        table.ajax.reload();
+    });
+
     function execute(json) {
         $.ajax({
             type: 'post',
@@ -444,4 +668,4 @@ $(document).ready(function () {
             }
         });
     }
-});
+})
